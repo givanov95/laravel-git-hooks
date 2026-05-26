@@ -1,0 +1,45 @@
+{
+    "name": "givanov95/laravel-git-hooks",
+    "description": "Composer plugin that installs a pre-commit git hook into Laravel + Vite projects — runs php-cs-fixer, a debug-statement guard, the Vite build (on frontend changes) and the test suite before each commit. Bypass with --no-verify.",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "keywords": ["git", "hooks", "pre-commit", "laravel", "vite", "composer-plugin", "phpunit", "quality"],
+    "authors": [
+        {
+            "name": "Georgi Ivanov"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "composer-plugin-api": "^2.0"
+    },
+    "require-dev": {
+        "composer/composer": "^2.5",
+        "phpunit/phpunit": "^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Givanov95\\LaravelGitHooks\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Givanov95\\LaravelGitHooks\\Tests\\": "tests/"
+        }
+    },
+    "bin": ["bin/laravel-git-hooks"],
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "extra": {
+        "class": "Givanov95\\LaravelGitHooks\\HookInstallerPlugin"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "givanov95/laravel-git-hooks": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

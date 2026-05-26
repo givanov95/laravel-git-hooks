@@ -1,0 +1,33 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/*
+ * CLI fallback installer for projects that disable Composer plugins.
+ * Usage (from the project root):  vendor/bin/laravel-git-hooks
+ */
+
+use Givanov95\LaravelGitHooks\HookInstaller;
+
+$autoloaders = [
+    __DIR__ . '/../../../autoload.php',  // installed as a dependency: vendor/givanov95/laravel-git-hooks/bin
+    __DIR__ . '/../vendor/autoload.php', // running from a clone of the package
+];
+
+foreach ($autoloaders as $autoloader) {
+    if (is_file($autoloader)) {
+        require $autoloader;
+        break;
+    }
+}
+
+if (! class_exists(HookInstaller::class)) {
+    require __DIR__ . '/../src/HookInstaller.php';
+}
+
+$installed = HookInstaller::install(getcwd(), static function (string $message): void {
+    fwrite(STDOUT, $message . PHP_EOL);
+});
+
+exit($installed ? 0 : 1);
