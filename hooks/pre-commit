@@ -5,11 +5,11 @@
 #
 # Steps (each is skipped gracefully when its tooling is absent):
 #   1. php-cs-fixer on the fully staged PHP files
-#   2. debug-statement guard (console.log / dd / dump)
+#   2. debug-statement guard (console.log() / dd() / dump() calls; paths in .debug-guard-ignore are skipped)
 #   3. Vite build — only when frontend files are staged
 #   4. test suite (php artisan test, or vendor/bin/phpunit)
 #
-# Skip individual steps:  SKIP_CSFIXER=1 / SKIP_BUILD=1 / SKIP_TESTS=1 git commit ...
+# Skip individual steps:  SKIP_CSFIXER=1 / SKIP_DEBUG_GUARD=1 / SKIP_BUILD=1 / SKIP_TESTS=1 git commit ...
 # Skip every step:        SKIP_HOOK=1 git commit ...
 # Bypass the hook itself:  git commit --no-verify
 
@@ -67,13 +67,37 @@ if [ "${SKIP_CSFIXER:-0}" != "1" ] && [ -x vendor/bin/php-cs-fixer ] && [ -n "$c
 fi
 
 # ── 2. debug-statement guard ───────────────────────────────────────────────
-code_files=$(staged | grep -E '\.(php|vue|js|ts)$' || true)
-if [ -n "$code_files" ]; then
-    offenders=$(echo "$code_files" | xargs grep -l -E '\b(console\.log|dd|dump)\(' 2>/dev/null || true)
+if [ "${SKIP_DEBUG_GUARD:-0}" != "1" ]; then
+    # Only calls count: `->dump(`, `::dump(`, `$dump(`, `obj.dump(`, `Foo\dump(` and `function dump(`
+    # are not debug statements. Whole-line comments (//, #, *, /*, <!--) are ignored; a comment
+    # trailing code on the same line is not recognised. The staged content is what gets scanned,
+    # not the working tree. Paths in .debug-guard-ignore (one git pathspec per line) are skipped.
+    debug_call='(^|[^[:alnum:]_>:$.\\])\\?(dd|dump)[[:space:]]*\(|(^|[^[:alnum:]_$])console\.log[[:space:]]*\('
+
+    guard_excludes=()
+    if [ -f .debug-guard-ignore ]; then
+        while IFS= read -r pattern || [ -n "$pattern" ]; do
+            pattern=${pattern%$'\r'}
+            case "$pattern" in '' | '#'*) continue ;; esac
+            guard_excludes+=(":(exclude)$pattern")
+        done < .debug-guard-ignore
+    fi
+
+    offenders=""
+    while IFS= read -r -d '' file; do
+        while IFS=: read -r number _; do
+            offenders+="${file}:${number}"$'\n'
+        done < <(
+            git show ":$file" 2>/dev/null \
+                | sed -E -e 's/^[[:space:]]*(\/\/|#|\*|\/\*|<!--).*$//' -e 's/function[[:space:]]+&?[[:space:]]*(dd|dump)[[:space:]]*\(/function (/g' \
+                | grep -n -E "$debug_call"
+        )
+    done < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.php' '*.vue' '*.js' '*.ts' ${guard_excludes[@]+"${guard_excludes[@]}"})
+
     if [ -n "$offenders" ]; then
-        echo "${RED}Commit contains console.log() / dd() / dump() statements:${RESET}"
-        echo "$offenders" | while IFS= read -r f; do echo "  ${YELLOW}${f}${RESET}"; done
-        echo "${RED}Please remove them (or use 'git commit --no-verify' to bypass).${RESET}"
+        echo "${RED}Commit contains console.log() / dd() / dump() calls:${RESET}"
+        printf '%s' "$offenders" | while IFS= read -r hit; do echo "  ${YELLOW}${hit}${RESET}"; done
+        echo "${RED}Remove them, list the path in .debug-guard-ignore, or run with SKIP_DEBUG_GUARD=1 (git commit --no-verify skips the whole hook).${RESET}"
         exit 1
     fi
 fi

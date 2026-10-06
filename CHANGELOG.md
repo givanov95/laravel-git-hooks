@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- `SKIP_DEBUG_GUARD=1` skips the debug-statement guard on its own.
+- `.debug-guard-ignore`: git pathspecs, one per line, that the debug-statement guard does not scan.
+
+### Changed
+
+- The debug-statement guard only flags function calls (`dd(`, `dump(`, `console.log(`), no longer
+  methods such as `->dump(` / `Vite::dump(` or `function dump(`, and it skips whole-line comments.
+  It reads the staged content instead of the working tree and reports `path:line`.
+
 ### Fixed
 
 - php-cs-fixer now runs only on the staged PHP files (`--path-mode=intersection`) instead of the
