@@ -31,7 +31,7 @@ if [ "${SKIP_HOOK:-0}" = "1" ]; then
     exit 0
 fi
 
-staged() { git diff --cached --name-only --diff-filter=ACM; }
+staged() { git diff --cached --name-only --diff-filter=ACMR; }
 
 # ── 1. php-cs-fixer ────────────────────────────────────────────────────────
 cs_config=""
@@ -51,7 +51,7 @@ if [ "${SKIP_CSFIXER:-0}" != "1" ] && [ -x vendor/bin/php-cs-fixer ] && [ -n "$c
         else
             partial_files+=("$file")
         fi
-    done < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.php')
+    done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.php')
 
     if [ "${#partial_files[@]}" -gt 0 ]; then
         echo "${YELLOW}php-cs-fixer: skipping partially staged files (they have unstaged changes):${RESET}"
@@ -92,7 +92,7 @@ if [ "${SKIP_DEBUG_GUARD:-0}" != "1" ]; then
                 | sed -E -e 's/^[[:space:]]*(\/\/|#|\*|\/\*|<!--).*$//' -e 's/function[[:space:]]+&?[[:space:]]*(dd|dump)[[:space:]]*\(/function (/g' \
                 | grep -n -E "$debug_call"
         )
-    done < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.php' '*.vue' '*.js' '*.ts' ${guard_excludes[@]+"${guard_excludes[@]}"})
+    done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.php' '*.vue' '*.js' '*.ts' ${guard_excludes[@]+"${guard_excludes[@]}"})
 
     if [ -n "$offenders" ]; then
         echo "${RED}Commit contains console.log() / dd() / dump() calls:${RESET}"
