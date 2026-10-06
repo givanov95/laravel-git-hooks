@@ -146,6 +146,34 @@ final class PreCommitHookDebugGuardTest extends TestCase
         $this->assertSame(0, $code, $output);
     }
 
+    public function test_it_scans_a_file_that_was_renamed_and_edited(): void
+    {
+        $this->write('app/Moved.php', "<?php\n// one\n// two\n// three\n// four\n// five\n");
+        $this->git('add', 'app/Moved.php');
+        $this->git('commit', '-q', '-m', 'add moved');
+        $this->git('mv', 'app/Moved.php', 'app/Renamed.php');
+        $this->write('app/Renamed.php', "<?php\n// one\n// two\n// three\n// four\ndd(1);\n");
+        $this->git('add', 'app/Renamed.php');
+        $this->assertStringContainsString('R', $this->git('status', '--short'));
+
+        [$code, $output] = $this->guard();
+
+        $this->assertSame(1, $code, $output);
+        $this->assertStringContainsString('app/Renamed.php:6', $output);
+    }
+
+    public function test_a_rename_without_a_debug_call_passes(): void
+    {
+        $this->write('app/Moved.php', "<?php\n// one\n// two\n// three\n// four\n// five\n");
+        $this->git('add', 'app/Moved.php');
+        $this->git('commit', '-q', '-m', 'add moved');
+        $this->git('mv', 'app/Moved.php', 'app/Renamed.php');
+
+        [$code, $output] = $this->guard();
+
+        $this->assertSame(0, $code, $output);
+    }
+
     public function test_skip_debug_guard_skips_the_step(): void
     {
         $this->write('app/A.php', "<?php\ndd(1);\n");

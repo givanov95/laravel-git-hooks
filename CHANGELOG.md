@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- A file that was renamed and edited (`R` in the staged diff) is no longer skipped by php-cs-fixer, the
+  debug-statement guard and the frontend-build trigger.
+
 ## [1.2.0] - 2026-10-06
 
 ### Added

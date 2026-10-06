@@ -114,6 +114,23 @@ final class PreCommitHookCsFixerTest extends TestCase
         $this->assertSame("<?php\n// spaced\n// fixed\n", $this->git('show', ':app/My File.php'));
     }
 
+    public function test_a_renamed_and_edited_php_file_is_formatted(): void
+    {
+        $this->write('app/Moved.php', "<?php\n// one\n// two\n// three\n// four\n// five\n");
+        $this->git('add', 'app/Moved.php');
+        $this->git('commit', '-q', '-m', 'add moved');
+        $this->git('mv', 'app/Moved.php', 'app/Renamed.php');
+        $this->write('app/Renamed.php', "<?php\n// one\n// two\n// three\n// four\n// five, edited\n");
+        $this->git('add', 'app/Renamed.php');
+        $this->assertStringContainsString('R', $this->git('status', '--short'));
+
+        [$code] = $this->runHook();
+
+        $this->assertSame(0, $code);
+        $this->assertSame(['app/Renamed.php'], $this->fixerPaths());
+        $this->assertStringEndsWith("// fixed\n", $this->git('show', ':app/Renamed.php'));
+    }
+
     public function test_skip_csfixer_skips_the_step(): void
     {
         $this->write('app/A.php', "<?php\n// a, edited\n");
