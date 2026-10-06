@@ -17,8 +17,11 @@ every project that requires it stays in sync.
 Each step is skipped gracefully when its tooling isn't present, so the same hook works across
 projects with different setups:
 
-1. **php-cs-fixer** — formats staged `*.php` files (needs `vendor/bin/php-cs-fixer` + a
-   `.php-cs-fixer.php` / `.php-cs-fixer.dist.php` config), then re-stages them.
+1. **php-cs-fixer** — formats the staged `*.php` files (needs `vendor/bin/php-cs-fixer` + a
+   `.php-cs-fixer.php` / `.php-cs-fixer.dist.php` config) and re-stages them. Only the staged
+   files are passed to the fixer — unstaged and untracked files are never touched. A file that
+   is only *partially* staged (`git add -p`) is skipped with a warning, so the fixer cannot
+   rewrite hunks you left out of the commit or pull them in when re-staging.
 2. **Debug-statement guard** — blocks the commit if staged `*.php/*.vue/*.js/*.ts` files
    contain `console.log(`, `dd(` or `dump(`.
 3. **Vite build** — runs `npm run build` **only when frontend files are staged** and a
@@ -65,7 +68,7 @@ vendor/bin/laravel-git-hooks
 
 ## Requirements
 
-- PHP `^8.3`
+- PHP `^8.2`
 - Composer `^2.0`
 - Git, and (per step) `bash`, `npm`, your project's `php artisan` / `phpunit`
 

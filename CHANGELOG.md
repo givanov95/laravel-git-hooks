@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- php-cs-fixer now runs only on the staged PHP files (`--path-mode=intersection`) instead of the
+  whole project, so unstaged files are no longer rewritten by a commit. Partially staged files
+  (`git add -p`) are skipped with a warning and never re-staged as a whole.
+
 ## [0.1.0] - 2026-05-26
 
 ### Added
