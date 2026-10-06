@@ -26,7 +26,7 @@ trait RunsPreCommitHook
         $this->git('config', 'user.name', 'Hook Test');
         $this->git('config', 'commit.gpgsign', 'false');
 
-        $this->write('.gitignore', "vendor/\nfixer.log\n");
+        $this->write('.gitignore', "vendor/\nfixer.log\nfixer.env\n");
         $this->write('.php-cs-fixer.dist.php', "<?php\n\nreturn null;\n");
         $this->write('vendor/bin/php-cs-fixer', $this->fixerStub());
         chmod($this->project . '/vendor/bin/php-cs-fixer', 0o755);
@@ -143,6 +143,30 @@ trait RunsPreCommitHook
         return $separator === false ? [] : array_slice($arguments, $separator + 1);
     }
 
+    /**
+     * Every argument php-cs-fixer was called with, across all calls.
+     *
+     * @return array<int, string>
+     */
+    protected function fixerArguments(): array
+    {
+        $log = $this->project . '/fixer.log';
+
+        return is_file($log) ? explode("\n", rtrim((string) file_get_contents($log), "\n")) : [];
+    }
+
+    /**
+     * What PHP_CS_FIXER_IGNORE_ENV was ("unset" if it was not) at each php-cs-fixer call.
+     *
+     * @return array<int, string>
+     */
+    protected function fixerIgnoreEnv(): array
+    {
+        $file = $this->project . '/fixer.env';
+
+        return is_file($file) ? explode("\n", rtrim((string) file_get_contents($file), "\n")) : [];
+    }
+
     protected function fixerWasRun(): bool
     {
         return is_file($this->project . '/fixer.log');
@@ -152,7 +176,17 @@ trait RunsPreCommitHook
     {
         return <<<'BASH'
             #!/usr/bin/env bash
-            printf '%s\n' "$@" >> "$(cd "$(dirname "$0")/../.." && pwd)/fixer.log"
+            if [[ " $* " == *" --help "* ]]; then
+                if [ "${FIXER_HELP_OPTION:-1}" = 1 ]; then
+                    echo '      --allow-unsupported-php-version=ALLOW-UNSUPPORTED-PHP-VERSION  Should the command refuse to run on unsupported PHP version'
+                fi
+                echo '      --cache-file=CACHE-FILE  The path to the cache file.'
+                exit 0
+            fi
+
+            root="$(cd "$(dirname "$0")/../.." && pwd)"
+            printf '%s\n' "$@" >> "$root/fixer.log"
+            printf '%s\n' "${PHP_CS_FIXER_IGNORE_ENV:-unset}" >> "$root/fixer.env"
 
             files=(); past_separator=0
             for arg in "$@"; do

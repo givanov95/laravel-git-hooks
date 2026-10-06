@@ -60,7 +60,16 @@ if [ "${SKIP_CSFIXER:-0}" != "1" ] && [ -x vendor/bin/php-cs-fixer ] && [ -n "$c
 
     if [ "${#fix_files[@]}" -gt 0 ]; then
         echo "Running php-cs-fixer..."
-        PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --config="$cs_config" --path-mode=intersection --using-cache=yes -q -- "${fix_files[@]}"
+        # php-cs-fixer refuses to run on a PHP version newer than it supports. Current versions take
+        # --allow-unsupported-php-version for that; the PHP_CS_FIXER_IGNORE_ENV variable they replace
+        # is deprecated (it prints a notice on every run) and is only set for older versions. The help
+        # goes through a variable, not `| grep -q`: under pipefail grep's early exit would fail the pipe.
+        fixer_help=$(vendor/bin/php-cs-fixer fix --help 2>/dev/null)
+        if [[ "$fixer_help" == *"--allow-unsupported-php-version"* ]]; then
+            vendor/bin/php-cs-fixer fix --config="$cs_config" --path-mode=intersection --using-cache=yes --allow-unsupported-php-version=yes -q -- "${fix_files[@]}"
+        else
+            PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --config="$cs_config" --path-mode=intersection --using-cache=yes -q -- "${fix_files[@]}"
+        fi
         # Re-stage what the fixer rewrote — only the files that were handed to it.
         git add -- "${fix_files[@]}"
     fi

@@ -131,6 +131,30 @@ final class PreCommitHookCsFixerTest extends TestCase
         $this->assertStringEndsWith("// fixed\n", $this->git('show', ':app/Renamed.php'));
     }
 
+    public function test_a_fixer_with_the_option_is_told_to_allow_an_unsupported_php_version_without_the_env_var(): void
+    {
+        $this->write('app/A.php', "<?php\n// a, edited\n");
+        $this->git('add', 'app/A.php');
+
+        $this->runHook();
+
+        $this->assertContains('--allow-unsupported-php-version=yes', $this->fixerArguments());
+        $this->assertSame(['unset'], $this->fixerIgnoreEnv());
+        $this->assertSame(['app/A.php'], $this->fixerPaths());
+    }
+
+    public function test_an_older_fixer_without_the_option_gets_the_env_var(): void
+    {
+        $this->write('app/A.php', "<?php\n// a, edited\n");
+        $this->git('add', 'app/A.php');
+
+        $this->runHook(['FIXER_HELP_OPTION' => '0']);
+
+        $this->assertNotContains('--allow-unsupported-php-version=yes', $this->fixerArguments());
+        $this->assertSame(['1'], $this->fixerIgnoreEnv());
+        $this->assertSame(['app/A.php'], $this->fixerPaths());
+    }
+
     public function test_skip_csfixer_skips_the_step(): void
     {
         $this->write('app/A.php', "<?php\n// a, edited\n");

@@ -8,6 +8,9 @@ All notable changes to this project are documented here.
 
 - A file that was renamed and edited (`R` in the staged diff) is no longer skipped by php-cs-fixer, the
   debug-statement guard and the frontend-build trigger.
+- php-cs-fixer is started with `--allow-unsupported-php-version=yes` when it supports the option, instead of
+  the deprecated `PHP_CS_FIXER_IGNORE_ENV`, which printed a notice on every commit. Older versions that do
+  not know the option still get the environment variable.
 
 ## [1.2.0] - 2026-10-06
 
