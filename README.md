@@ -22,8 +22,8 @@ projects with different setups:
    files are passed to the fixer — unstaged and untracked files are never touched. A file that
    is only *partially* staged (`git add -p`) is skipped with a warning, so the fixer cannot
    rewrite hunks you left out of the commit or pull them in when re-staging.
-2. **Debug-statement guard** — blocks the commit if staged `*.php/*.vue/*.js/*.ts` files
-   contain `console.log(`, `dd(` or `dump(`.
+2. **Debug-statement guard** — blocks the commit if the staged `*.php/*.vue/*.js/*.ts` files
+   call `console.log()`, `dd()` or `dump()` (see [Debug-statement guard](#debug-statement-guard)).
 3. **Vite build** — runs `npm run build` **only when frontend files are staged** and a
    `build` script exists in `package.json`.
 4. **Tests** — runs `php artisan test` (or `vendor/bin/phpunit`).
@@ -65,6 +65,31 @@ vendor/bin/laravel-git-hooks
 | Skip just the build | `SKIP_BUILD=1 git commit ...` |
 | Skip just the tests | `SKIP_TESTS=1 git commit ...` |
 | Skip php-cs-fixer | `SKIP_CSFIXER=1 git commit ...` |
+| Skip the debug-statement guard | `SKIP_DEBUG_GUARD=1 git commit ...` |
+
+## Debug-statement guard
+
+The guard looks at what is **staged** (not the working tree) and only flags *calls*:
+
+- `dd(...)`, `dump(...)` and `\dump(...)` as functions, and `console.log(...)`;
+- not methods or other things that share the name: `$collection->dump()`, `->dd()`,
+  `Vite::dump()`, `$dump()`, `yaml.dump()`, `Foo\dump()`, `function dump()`;
+- not lines that start with a comment marker (`//`, `#`, `*`, `/*`, `<!--`). A comment *after*
+  code on the same line is not recognised, so `dd($x); // later` is still flagged, and so is a
+  `dump(` inside a comment that follows code.
+
+To exempt paths — tests, docs, fixtures — add a `.debug-guard-ignore` file to the project root.
+Each line is a [git pathspec](https://git-scm.com/docs/gitglossary#def_pathspec); blank lines
+and lines starting with `#` are ignored:
+
+```
+# tests may use dump() on purpose
+tests/
+docs/**
+*.stub.php
+```
+
+For a single commit use `SKIP_DEBUG_GUARD=1`. By default no path is exempt.
 
 ## Requirements
 
