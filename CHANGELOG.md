@@ -31,6 +31,21 @@ All notable changes to this project are documented here.
   whole project, so unstaged files are no longer rewritten by a commit. Partially staged files
   (`git add -p`) are skipped with a warning and never re-staged as a whole.
 
+## [1.1.1] - 2026-06-23
+
+### Changed
+
+- The `php` requirement is lowered from `^8.3` to `^8.2`, so the package can be installed in projects
+  that run PHP 8.2.
+
+## [1.1.0] - 2026-06-23
+
+### Added
+
+- CI for the package itself: `.github/workflows/ci.yml` calls the reusable `php-package.yml` workflow of
+  `givanov95/ci-workflows` on every push and pull request (PHP 8.3 and 8.4). Nothing in the installed
+  plugin or hook changed.
+
 ## [0.1.0] - 2026-05-26
 
 ### Added
