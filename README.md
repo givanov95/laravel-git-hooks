@@ -26,7 +26,8 @@ projects with different setups:
    call `console.log()`, `dd()` or `dump()` (see [Debug-statement guard](#debug-statement-guard)).
 3. **Vite build** — runs `npm run build` **only when frontend files are staged** and a
    `build` script exists in `package.json`.
-4. **Tests** — runs `php artisan test` (or `vendor/bin/phpunit`).
+4. **Tests** — runs `php artisan test` (or `vendor/bin/phpunit`), or in parallel when the project
+   switches it on (see [Parallel tests](#parallel-tests)).
 
 ## Installation
 
@@ -66,6 +67,27 @@ vendor/bin/laravel-git-hooks
 | Skip just the tests | `SKIP_TESTS=1 git commit ...` |
 | Skip php-cs-fixer | `SKIP_CSFIXER=1 git commit ...` |
 | Skip the debug-statement guard | `SKIP_DEBUG_GUARD=1 git commit ...` |
+| Run the tests one by one | `SKIP_PARALLEL=1 git commit ...` |
+
+## Parallel tests
+
+A project whose suite is safe in parallel switches the parallel run on in its `composer.json`:
+
+```json
+{
+    "extra": {
+        "laravel-git-hooks": {
+            "parallel": true
+        }
+    }
+}
+```
+
+The hook then runs `php artisan test --parallel` (or `vendor/bin/paratest` without `artisan`), one
+process per CPU. It needs `brianium/paratest` (`composer require --dev brianium/paratest`); without it
+the hook warns and runs the tests one by one. The setting is opt-in on purpose: having paratest
+installed does not switch a project over, so a suite that is not safe in parallel never changes by
+itself. `SKIP_PARALLEL=1` runs one commit's tests one by one.
 
 ## Debug-statement guard
 

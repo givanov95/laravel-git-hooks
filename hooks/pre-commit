@@ -7,9 +7,11 @@
 #   1. php-cs-fixer on the fully staged PHP files
 #   2. debug-statement guard (console.log() / dd() / dump() calls; paths in .debug-guard-ignore are skipped)
 #   3. Vite build — only when frontend files are staged
-#   4. test suite (php artisan test, or vendor/bin/phpunit)
+#   4. test suite (php artisan test, or vendor/bin/phpunit); in parallel (paratest) when composer.json
+#      has "extra": {"laravel-git-hooks": {"parallel": true}}
 #
 # Skip individual steps:  SKIP_CSFIXER=1 / SKIP_DEBUG_GUARD=1 / SKIP_BUILD=1 / SKIP_TESTS=1 git commit ...
+# Tests one by one:       SKIP_PARALLEL=1 git commit ...
 # Skip every step:        SKIP_HOOK=1 git commit ...
 # Bypass the hook itself:  git commit --no-verify
 
@@ -124,17 +126,37 @@ if [ "${SKIP_BUILD:-0}" != "1" ] && [ -f package.json ] && command -v npm >/dev/
 fi
 
 # ── 4. tests ───────────────────────────────────────────────────────────────
+# A project opts in to a parallel run with "extra": {"laravel-git-hooks": {"parallel": true}} in its
+# composer.json; without it the suite runs one test after another, as before. Opt-in rather than
+# "paratest is installed", so a project whose suite is not safe in parallel never switches by itself.
+parallel_tests() {
+    [ "${SKIP_PARALLEL:-0}" != "1" ] && [ -f composer.json ] && command -v php >/dev/null 2>&1 || return 1
+    php -r '$c = json_decode((string) file_get_contents("composer.json"), true);
+        exit(($c["extra"]["laravel-git-hooks"]["parallel"] ?? false) === true ? 0 : 1);'
+}
+
 if [ "${SKIP_TESTS:-0}" != "1" ]; then
-    if [ -f artisan ]; then
-        echo "Running tests (php artisan test)..."
-        if ! php artisan test; then
-            echo "${RED}Error: tests failed. Commit aborted.${RESET}"
-            exit 1
+    test_cmd=()
+    if parallel_tests; then
+        if [ ! -x vendor/bin/paratest ]; then
+            echo "${YELLOW}Warning: parallel tests are switched on, but brianium/paratest is not installed; running them one by one.${RESET}"
+        elif [ -f artisan ]; then
+            test_cmd=(php artisan test --parallel)
+        else
+            test_cmd=(vendor/bin/paratest)
         fi
-        echo "${GREEN}Tests passed.${RESET}"
-    elif [ -x vendor/bin/phpunit ]; then
-        echo "Running tests (phpunit)..."
-        if ! vendor/bin/phpunit; then
+    fi
+    if [ "${#test_cmd[@]}" -eq 0 ]; then
+        if [ -f artisan ]; then
+            test_cmd=(php artisan test)
+        elif [ -x vendor/bin/phpunit ]; then
+            test_cmd=(vendor/bin/phpunit)
+        fi
+    fi
+
+    if [ "${#test_cmd[@]}" -gt 0 ]; then
+        echo "Running tests (${test_cmd[*]})..."
+        if ! "${test_cmd[@]}"; then
             echo "${RED}Error: tests failed. Commit aborted.${RESET}"
             exit 1
         fi
