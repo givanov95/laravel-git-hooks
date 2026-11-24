@@ -7,9 +7,10 @@ All notable changes to this project are documented here.
 ### Added
 
 - Parallel tests: with `"extra": {"laravel-git-hooks": {"parallel": true}}` in the project's `composer.json`
-  the hook runs `php artisan test --parallel` (or `vendor/bin/paratest`). Without `brianium/paratest` it warns
-  and runs the tests one by one; `SKIP_PARALLEL=1` does the same for one commit. Projects without the
-  setting are unchanged.
+  the hook runs `php artisan test --parallel` (`vendor/bin/paratest` in a project without `artisan`). Without
+  `brianium/paratest`, or with a value other than `true`, it warns and runs the tests one by one.
+  `SKIP_PARALLEL=1` runs one commit's tests one by one. Projects without the setting run their tests as
+  before.
 
 ## [1.2.1] - 2026-10-06
 

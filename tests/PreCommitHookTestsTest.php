@@ -102,6 +102,41 @@ final class PreCommitHookTestsTest extends TestCase
         $this->assertSame(['paratest'], $this->testRuns());
     }
 
+    public function test_a_setting_that_is_not_true_warns_and_runs_one_by_one(): void
+    {
+        $this->installParatest();
+        $this->write('composer.json', "{\"extra\": {\"laravel-git-hooks\": {\"parallel\": \"true\"}}}\n");
+
+        [$code, $output] = $this->tests();
+
+        $this->assertSame(0, $code, $output);
+        $this->assertStringContainsString('must be true', $output);
+        $this->assertSame(['artisan test'], $this->testRuns());
+    }
+
+    public function test_a_failing_serial_run_aborts_the_commit(): void
+    {
+        [$code, $output] = $this->tests(['TESTS_EXIT' => '1']);
+
+        $this->assertSame(1, $code, $output);
+        $this->assertStringContainsString('tests failed', $output);
+        $this->assertSame(['artisan test'], $this->testRuns());
+    }
+
+    public function test_without_artisan_and_the_setting_phpunit_runs_as_before(): void
+    {
+        unlink($this->project . '/artisan');
+        $this->installParatest();
+        $this->write('vendor/bin/phpunit', "#!/usr/bin/env bash\necho phpunit >> \"\$(dirname \"\$0\")/../../tests.log\"\n");
+        chmod($this->project . '/vendor/bin/phpunit', 0o755);
+
+        [$code, $output] = $this->tests();
+
+        $this->assertSame(0, $code, $output);
+        $this->assertStringContainsString('Running tests (phpunit)...', $output);
+        $this->assertSame(['phpunit'], $this->testRuns());
+    }
+
     private function optIn(): void
     {
         $this->write('composer.json', "{\"extra\": {\"laravel-git-hooks\": {\"parallel\": true}}}\n");

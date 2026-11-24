@@ -129,33 +129,45 @@ fi
 # A project opts in to a parallel run with "extra": {"laravel-git-hooks": {"parallel": true}} in its
 # composer.json; without it the suite runs one test after another, as before. Opt-in rather than
 # "paratest is installed", so a project whose suite is not safe in parallel never switches by itself.
-parallel_tests() {
-    [ "${SKIP_PARALLEL:-0}" != "1" ] && [ -f composer.json ] && command -v php >/dev/null 2>&1 || return 1
+# Exit status: 0 = parallel, 1 = not set, 2 = set to something other than true.
+parallel_setting() {
+    [ -f composer.json ] && command -v php >/dev/null 2>&1 || return 1
     php -r '$c = json_decode((string) file_get_contents("composer.json"), true);
-        exit(($c["extra"]["laravel-git-hooks"]["parallel"] ?? false) === true ? 0 : 1);'
+        $hooks = is_array($c) ? ($c["extra"]["laravel-git-hooks"] ?? null) : null;
+        if (! is_array($hooks) || ! array_key_exists("parallel", $hooks)) { exit(1); }
+        exit($hooks["parallel"] === true ? 0 : 2);'
 }
 
 if [ "${SKIP_TESTS:-0}" != "1" ]; then
     test_cmd=()
-    if parallel_tests; then
+    test_label=""
+    run_parallel=0
+    if [ "${SKIP_PARALLEL:-0}" != "1" ]; then
+        parallel_setting
+        case $? in
+            0) run_parallel=1 ;;
+            2) echo "${YELLOW}Warning: extra.laravel-git-hooks.parallel in composer.json must be true (a JSON boolean); running the tests one by one.${RESET}" ;;
+        esac
+    fi
+    if [ "$run_parallel" = "1" ]; then
         if [ ! -x vendor/bin/paratest ]; then
             echo "${YELLOW}Warning: parallel tests are switched on, but brianium/paratest is not installed; running them one by one.${RESET}"
         elif [ -f artisan ]; then
-            test_cmd=(php artisan test --parallel)
+            test_cmd=(php artisan test --parallel); test_label="php artisan test --parallel"
         else
-            test_cmd=(vendor/bin/paratest)
+            test_cmd=(vendor/bin/paratest); test_label="paratest"
         fi
     fi
     if [ "${#test_cmd[@]}" -eq 0 ]; then
         if [ -f artisan ]; then
-            test_cmd=(php artisan test)
+            test_cmd=(php artisan test); test_label="php artisan test"
         elif [ -x vendor/bin/phpunit ]; then
-            test_cmd=(vendor/bin/phpunit)
+            test_cmd=(vendor/bin/phpunit); test_label="phpunit"
         fi
     fi
 
     if [ "${#test_cmd[@]}" -gt 0 ]; then
-        echo "Running tests (${test_cmd[*]})..."
+        echo "Running tests (${test_label})..."
         if ! "${test_cmd[@]}"; then
             echo "${RED}Error: tests failed. Commit aborted.${RESET}"
             exit 1
