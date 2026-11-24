@@ -129,13 +129,13 @@ fi
 # A project opts in to a parallel run with "extra": {"laravel-git-hooks": {"parallel": true}} in its
 # composer.json; without it the suite runs one test after another, as before. Opt-in rather than
 # "paratest is installed", so a project whose suite is not safe in parallel never switches by itself.
-# Exit status: 0 = parallel, 1 = not set, 2 = set to something other than true.
+# Exit status: 0 = parallel, 1 = not set or false, 2 = set to something other than a boolean.
 parallel_setting() {
     [ -f composer.json ] && command -v php >/dev/null 2>&1 || return 1
     php -r '$c = json_decode((string) file_get_contents("composer.json"), true);
         $hooks = is_array($c) ? ($c["extra"]["laravel-git-hooks"] ?? null) : null;
         if (! is_array($hooks) || ! array_key_exists("parallel", $hooks)) { exit(1); }
-        exit($hooks["parallel"] === true ? 0 : 2);'
+        exit($hooks["parallel"] === true ? 0 : ($hooks["parallel"] === false ? 1 : 2));'
 }
 
 if [ "${SKIP_TESTS:-0}" != "1" ]; then

@@ -85,7 +85,8 @@ A project whose suite is safe in parallel switches the parallel run on in its `c
 
 The hook then runs `php artisan test --parallel` (or `vendor/bin/paratest` without `artisan`), one
 process per CPU. It needs `brianium/paratest` (`composer require --dev brianium/paratest`); without it
-the hook warns and runs the tests one by one, and so it does when the value is not the JSON boolean `true`. The setting is opt-in on purpose: having paratest
+the hook warns and runs the tests one by one, and so it does when the value is not a JSON boolean
+(`false` turns the parallel run off quietly). The setting is opt-in on purpose: having paratest
 installed does not switch a project over, so a suite that is not safe in parallel never changes by
 itself. `SKIP_PARALLEL=1` runs one commit's tests one by one.
 

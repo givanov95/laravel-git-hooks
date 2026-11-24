@@ -114,6 +114,18 @@ final class PreCommitHookTestsTest extends TestCase
         $this->assertSame(['artisan test'], $this->testRuns());
     }
 
+    public function test_false_runs_the_tests_one_by_one_without_a_warning(): void
+    {
+        $this->installParatest();
+        $this->write('composer.json', "{\"extra\": {\"laravel-git-hooks\": {\"parallel\": false}}}\n");
+
+        [$code, $output] = $this->tests();
+
+        $this->assertSame(0, $code, $output);
+        $this->assertStringNotContainsString('Warning', $output);
+        $this->assertSame(['artisan test'], $this->testRuns());
+    }
+
     public function test_a_failing_serial_run_aborts_the_commit(): void
     {
         [$code, $output] = $this->tests(['TESTS_EXIT' => '1']);
